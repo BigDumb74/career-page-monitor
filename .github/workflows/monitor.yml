@@ -1,0 +1,42 @@
+name: Career Page Monitor
+
+on:
+  schedule:
+    # Runs every day at 12:00 UTC (8:00 AM EST)
+    - cron: '0 12 * * *'
+  # Allows you to manually trigger the script from the GitHub UI anytime
+  workflow_dispatch:
+
+jobs:
+  run-monitor:
+    runs-on: ubuntu-latest
+
+    permissions:
+      # Gives the action permission to write the updated JSON file back to the repo
+      contents: write
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install playwright
+        playwright install chromium
+
+    - name: Run Scraper Script
+      run: python monitor.py
+
+    - name: Commit and Push State Changes
+      run: |
+        git config --global user.name "GitHub Actions Bot"
+        git config --global user.email "actions@github.com"
+        git add last_state.json
+        # Only commit if the file actually changed, preventing empty run errors
+        git diff-index --quiet HEAD || (git commit -m "Automated state update: $(date)" && git push)
